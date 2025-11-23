@@ -1,0 +1,136 @@
+name: Docker Build
+on:
+  push:
+    branches: [ main, develop ]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-backend:
+    name:  Backend Docker Image
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./chat-backend
+          file: ./chat-backend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/chat-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/chat-backend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/chat-backend:buildcache
+          cache-to: type=inline
+
+      # ============================================
+      # DEPLOYMENT STEP
+      # ============================================
+      # Deploys the Docker container to your server
+      # Make sure to configure the secrets below!
+      - name: Deploy Backend Container
+        if: github.ref == 'refs/heads/main' && secrets.SERVER_HOST != ''
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Pull the latest image
+            docker pull ${{ secrets.DOCKER_USERNAME }}/chat-backend:latest
+            
+            # Stop and remove old container (if exists)
+            docker stop chat-backend || true
+            docker rm chat-backend || true
+            
+            # Run new container
+            docker run -d \
+              --name chat-backend \
+              -p 8000:8000 \
+              --restart unless-stopped \
+              -e MONGODB_URI="${{ secrets.MONGODB_URI }}" \
+              -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+              -e NODE_ENV=production \
+              ${{ secrets.DOCKER_USERNAME }}/chat-backend:latest
+            
+            # Clean up old images (optional - saves disk space)
+            docker image prune -f
+
+  build-frontend:
+    name: Build Frontend Docker Image
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./chat-frontend
+          file: ./chat-frontend/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/chat-frontend:latest
+            ${{ secrets.DOCKER_USERNAME }}/chat-frontend:${{ github.sha }}
+          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/chat-frontend:buildcache
+          cache-to: type=inline
+
+      # ============================================
+      # DEPLOYMENT STEP
+      # ============================================
+      # Deploys the Docker container to your server
+      # Make sure to configure the secrets below!
+      - name: Deploy Frontend Container
+        if: github.ref == 'refs/heads/main' && secrets.SERVER_HOST != ''
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            # Pull the latest image
+            docker pull ${{ secrets.DOCKER_USERNAME }}/chat-frontend:latest
+            
+            # Stop and remove old container (if exists)
+            docker stop chat-frontend || true
+            docker rm chat-frontend || true
+            
+            # Run new container
+            docker run -d \
+              --name chat-frontend \
+              -p 3000:3000 \
+              --restart unless-stopped \
+              -e NEXT_PUBLIC_API_URL="${{ secrets.NEXT_PUBLIC_API_URL }}" \
+              -e NODE_ENV=production \
+              ${{ secrets.DOCKER_USERNAME }}/chat-frontend:latest
+            
+            # Clean up old images (optional - saves disk space)
+            docker image prune -f
+

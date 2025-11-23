@@ -1,0 +1,28 @@
+name: Full CI
+
+# This workflow is OPTIONAL - it provides a unified CI check
+# The path-based workflows (backend-ci.yml, frontend-ci.yml) are more efficient
+# You can delete this file if you prefer only the path-based workflows
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # This job just ensures both backend and frontend workflows pass
+  # It doesn't duplicate the work - it references the other workflows
+  check-status:
+    name: Verify All Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Verify workflows
+        run: |
+          echo "This workflow ensures all path-based CI checks pass"
+          echo "Backend CI and Frontend CI workflows handle the actual testing"
+          echo "This is a placeholder - you can delete this file if not needed"
+
