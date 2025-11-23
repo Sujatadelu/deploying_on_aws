@@ -2,20 +2,20 @@ name: Frontend CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'chat-frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+      - "chat-frontend/**"
+      - ".github/workflows/frontend-ci.yml"
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'chat-frontend/**'
-      - '.github/workflows/frontend-ci.yml'
+      - "chat-frontend/**"
+      - ".github/workflows/frontend-ci.yml"
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
     defaults:
       run:
         working-directory: ./chat-frontend
@@ -32,7 +32,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: chat-frontend/package-lock.json
 
       - name: Install dependencies
@@ -46,6 +46,7 @@ jobs:
         env:
           # Add any required environment variables for build
           NODE_ENV: production
+          NEXT_PUBLIC_BACKEND_API: ${{ secrets.NEXT_PUBLIC_BACKEND_API }}
 
       - name: Check for build artifacts
         run: |
@@ -54,4 +55,3 @@ jobs:
             exit 1
           fi
           echo "Build successful"
-

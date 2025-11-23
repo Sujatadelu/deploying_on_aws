@@ -2,20 +2,26 @@ name: Backend CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'chat-backend/**'
-      - '.github/workflows/backend-ci.yml'
+      - "chat-backend/**"
+      - ".github/workflows/backend-ci.yml"
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'chat-backend/**'
-      - '.github/workflows/backend-ci.yml'
+      - "chat-backend/**"
+      - ".github/workflows/backend-ci.yml"
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+
+    env:
+      MONGODB_URI: ${{ secrets.MONGODB_URI }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      PORT: ${{ secrets.PORT }}
+      CORS_ORIGIN: ${{ secrets.CORS_ORIGIN }}
+
     defaults:
       run:
         working-directory: ./chat-backend
@@ -32,7 +38,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: "npm"
           cache-dependency-path: chat-backend/package-lock.json
 
       - name: Install dependencies
@@ -54,4 +60,3 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit || echo "Type checking completed"
-
